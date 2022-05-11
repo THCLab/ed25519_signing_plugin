@@ -133,7 +133,16 @@ public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
         result.success(false)
       }
     }else if(call.method == "establishForEd25519"){
-
+      val uuid = call.argument<String>("uuid")
+      if (uuid != null) {
+        try {
+          createEd25519Key(uuid)
+          createSecondEd25519Key(uuid)
+          result.success(true)
+        }catch (e: Exception){
+          result.success(false)
+        }
+      }
     }else {
       result.notImplemented()
     }

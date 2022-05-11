@@ -16,14 +16,8 @@ class Ed25519Signer{
     return key;
   }
 
-  static Future<String> getUuid() async{
-    var uuid = await _channel.invokeMethod("getUuid");
+  String getUuid(){
     return uuid;
   }
-
-  static Ed25519Signer getSignerFromUuid(String uuid){
-    return Ed25519Signer(uuid);
-  }
-
 
 }
