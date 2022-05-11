@@ -2,6 +2,7 @@
 import 'dart:async';
 
 import 'package:ed25519_signing_plugin/ed25519_signer.dart';
+import 'package:ed25519_signing_plugin/rsa_signer.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
@@ -22,6 +23,16 @@ class Ed25519SigningPlugin {
 
   static Ed25519Signer getSignerFromUuid(String uuid){
     return Ed25519Signer(uuid);
+  }
+
+  static Future<RSASigner> establishForRSA() async{
+    var uuid = const Uuid().toString();
+    await _channel.invokeMethod('establishForRSA', {'uuid' : uuid});
+    return RSASigner(uuid);
+  }
+
+  static Future<void> cleanUp(String uuid) async{
+    await _channel.invokeMethod('cleanUp', {'uuid' : uuid});
   }
 
 

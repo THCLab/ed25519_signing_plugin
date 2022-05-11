@@ -6,12 +6,26 @@ class RSASigner{
 
   RSASigner(this.uuid);
 
-  Future<String> getPubKey() async{
-    var key = await _channel.invokeMethod("getRSAKey", {'alias': "${uuid}_rsa"});
+  Future<String> getCurrentPubKey() async{
+    var key = await _channel.invokeMethod("getRSAKey", {'alias': "${uuid}_0_rsa"});
+    return key;
+  }
+
+  Future<String> getNextPubKey() async{
+    var key = await _channel.invokeMethod("getRSAKey", {'alias': "${uuid}_1_rsa"});
     return key;
   }
 
   String getUuid(){
     return uuid;
+  }
+
+  Future<void> rotateForRSA() async{
+    await _channel.invokeMethod("rotateForRSA", {'uuid' : uuid});
+  }
+
+  Future<String> sign(String message) async{
+    var signature = await _channel.invokeMethod("signRSA", {'uuid' : uuid, 'message' : message});
+    return signature;
   }
 }

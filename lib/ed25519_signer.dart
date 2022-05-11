@@ -20,4 +20,13 @@ class Ed25519Signer{
     return uuid;
   }
 
+  Future<void> rotateForEd25519() async{
+    await _channel.invokeMethod("rotateForEd25519", {'uuid' : uuid});
+  }
+
+  Future<String> sign(String message) async{
+    var signature = await _channel.invokeMethod("signEd25519", {'uuid' : uuid, 'message' : message});
+    return signature;
+  }
+
 }
