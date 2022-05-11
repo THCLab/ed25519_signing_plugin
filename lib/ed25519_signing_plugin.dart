@@ -1,6 +1,7 @@
 
 import 'dart:async';
 
+import 'package:ed25519_signing_plugin/ed25519_signer.dart';
 import 'package:flutter/services.dart';
 
 import 'exceptions.dart';
@@ -26,6 +27,14 @@ class Ed25519SigningPlugin {
     }
     throw DeviceNotSecuredException(
         'Secure lock on this device is not set up. Consider setting a pin or pattern.');
+  }
+
+  ///Initializes the Ed25519 signer object, which will allow the user to generate keys,
+  ///rotate them and delete them.
+  static Future<Ed25519Signer> establishForEd25519() async{
+    var uuid = await _channel.invokeMethod('readData', {'key': 'identifier'});
+    await _channel.invokeMethod('establishForEd25519');
+    return Ed25519Signer(uuid);
   }
 
   ///Reads data saved under provided key from shared preferences. First, data signature is verified and if it is valid, data are decrypted.

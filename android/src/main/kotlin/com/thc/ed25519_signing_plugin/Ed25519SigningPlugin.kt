@@ -37,7 +37,7 @@ import javax.security.auth.x500.X500Principal
 import kotlin.properties.Delegates
 
 /** Ed25519SigningPlugin */
-class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRegistry.ActivityResultListener {
+public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRegistry.ActivityResultListener {
   /// The MethodChannel that will the communication between Flutter and native Android
   ///
   /// This local reference serves to register the plugin with the Flutter Engine and unregister it
@@ -60,19 +60,9 @@ class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     context = flutterPluginBinding.applicationContext
     keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
     checkIfDeviceSecure()
-    val algorithm = getAlgorithm()
+
     if(!checkAESKeyExists()){
       createAESKey()
-    }
-    if(algorithm == "Ed25519"){
-      if(!checkEd25519KeyExists()){
-        createEd25519Key()
-        createSecondEd25519Key()
-      }
-    }else if(algorithm == "RSA"){
-      if(!checkRSAKeyExists()){
-        createRSAKey()
-      }
     }
   }
 
@@ -84,20 +74,6 @@ class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
       var kp = KeyPair(Key.fromBase64String(pub as String?),Key.fromBase64String(priv as String?))
       var signature = message?.let { signEd25519(kp, it, lazySodium) }
       result.success(signature)
-    }else if(call.method == "verifyEd25519"){
-      val message = call.argument<String>("message")
-      val signature = call.argument<String>("signature")
-      val key = call.argument<String>("key")
-      //var res = verify(key!!, message!!, lazySodium, signature!!)
-      //result.success(res);
-    }else if(call.method == "setAlgorithm"){
-      val algorithm = call.argument<String>("algorithm")
-      if (algorithm != null) {
-        setAlgorithm(algorithm)
-      }
-    }else if(call.method == "getAlgorithm"){
-      val algorithm = getAlgorithm()
-      result.success(algorithm)
     }else if(call.method == "signRSA"){
       this.pendingResult = result
       val data = call.argument<String>("message")
@@ -110,18 +86,6 @@ class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
         }
       }else{
         result.error("UNAVAILABLE", "Data cannot be null!", null)
-      }
-    }else if(call.method == "verifyRSA"){
-      val data = call.argument<String>("message")
-      if(data != null){
-        val isValid = verifyRSA(data)
-        if(isValid){
-          result.success(true)
-        }else{
-          result.success(false)
-        }
-      }else{
-        result.error("UNAVAILABLE", "Key cannot be null!", null)
       }
     }else if(call.method == "checkIfDeviceSecure"){
       val getResult = checkIfDeviceSecure()
@@ -168,8 +132,9 @@ class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
       }else{
         result.success(false)
       }
-    }
-    else {
+    }else if(call.method == "establishForEd25519"){
+
+    }else {
       result.notImplemented()
     }
   }
@@ -189,91 +154,65 @@ class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     }
   }
 
-  /** Functions for getting/setting data signing algorithm */
-  private fun setAlgorithm(algorithm: String){
-    val sharedPref = activity.getPreferences(Context.MODE_PRIVATE) ?: return
-    with (sharedPref.edit()) {
-      putString(ALGORITHM_ALIAS, algorithm)
-      apply()
-    }
-    if(algorithm == "Ed25519"){
-      if(!checkEd25519KeyExists()){
-        createEd25519Key()
-        createSecondEd25519Key()
-      }
-    }else if(algorithm == "RSA"){
-      if(!checkRSAKeyExists()){
-        createRSAKey()
-      }
-    }
-  }
-
-  private fun getAlgorithm(): String? {
-    val sharedPref = activity.getPreferences(Context.MODE_PRIVATE)
-    return sharedPref.getString(ALGORITHM_ALIAS, null)
-  }
 
   /** Ed25519 functions */
   fun signEd25519(keyPair: KeyPair, text: String, lazySodium: LazySodiumAndroid): String? {
-    if(getAlgorithm() != null){
-      val messageBytes: ByteArray = lazySodium.bytes(text)
-      val signedMessage: ByteArray = lazySodium.randomBytesBuf(Sign.BYTES)
-      val res: String? = lazySodium.cryptoSignDetached(
-        text, keyPair.secretKey
-      )
-      if (res != null) {
-      }
-      return res
+    val messageBytes: ByteArray = lazySodium.bytes(text)
+    val signedMessage: ByteArray = lazySodium.randomBytesBuf(Sign.BYTES)
+    val res: String? = lazySodium.cryptoSignDetached(
+      text, keyPair.secretKey
+    )
+    if (res != null) {
     }
-    return null
+    return res
   }
 
-  fun verifyEd25519(
-    key : String,
-    message: String,
-    lazySodium: LazySodiumAndroid,
-    signature: String
-  ): Boolean {
-    return lazySodium.cryptoSignVerifyDetached(
-      signature, message, Key.fromBase64String(key)
-    )
-  }
+//  fun verifyEd25519(
+//    key : String,
+//    message: String,
+//    lazySodium: LazySodiumAndroid,
+//    signature: String
+//  ): Boolean {
+//    return lazySodium.cryptoSignVerifyDetached(
+//      signature, message, Key.fromBase64String(key)
+//    )
+//  }
 
   fun getPublicKey(keyPair: KeyPair) = Base64.encodeToString(keyPair.publicKey.asBytes, Base64.NO_WRAP)
   fun getPrivateKey(keyPair: KeyPair) = Base64.encodeToString(keyPair.secretKey.asBytes, Base64.NO_WRAP)
 
 
-  /** RSA functions */
-  //FUNCTION TO VERIFY DATA READ FROM SHARED PREFERENCES
-  private fun verifyRSA(dataToVerify: String?) : Boolean {
-    if (isDeviceSecure) {
-      val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
-        load(null)
-      }
-      val signatureFromUser = dataToVerify?.subSequence(0, dataToVerify.indexOf(":")).toString()
-      val dataFromUser =
-        dataToVerify?.subSequence(dataToVerify.indexOf(":") + 1, dataToVerify.length).toString()
-      val certificate: Certificate? = keyStore.getCertificate(RSA_KEY_ALIAS)
-
-      if (certificate != null) {
-        val signature: ByteArray = Base64.decode(signatureFromUser, Base64.DEFAULT)
-        val isValid: Boolean = Signature.getInstance("SHA256withRSA").run {
-          initVerify(certificate)
-          update(dataFromUser.toByteArray())
-          verify(signature)
-        }
-        return isValid
-      } else {
-        return false
-      }
-    } else {
-      return false
-    }
-  }
+//  /** RSA functions */
+//  //FUNCTION TO VERIFY DATA READ FROM SHARED PREFERENCES
+//  private fun verifyRSA(dataToVerify: String?) : Boolean {
+//    if (isDeviceSecure) {
+//      val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
+//        load(null)
+//      }
+//      val signatureFromUser = dataToVerify?.subSequence(0, dataToVerify.indexOf(":")).toString()
+//      val dataFromUser =
+//        dataToVerify?.subSequence(dataToVerify.indexOf(":") + 1, dataToVerify.length).toString()
+//      val certificate: Certificate? = keyStore.getCertificate(RSA_KEY_ALIAS)
+//
+//      if (certificate != null) {
+//        val signature: ByteArray = Base64.decode(signatureFromUser, Base64.DEFAULT)
+//        val isValid: Boolean = Signature.getInstance("SHA256withRSA").run {
+//          initVerify(certificate)
+//          update(dataFromUser.toByteArray())
+//          verify(signature)
+//        }
+//        return isValid
+//      } else {
+//        return false
+//      }
+//    } else {
+//      return false
+//    }
+//  }
 
 
   /** Shared Preferences functions */
-  private fun writeData(key: String, data: String){
+  fun writeData(key: String, data: String){
     try{
       val encryptedData = encrypt(data)
       val sharedPref = activity.getPreferences(Context.MODE_PRIVATE) ?: return
@@ -353,36 +292,36 @@ class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     return secretKey != null
   }
 
-  private fun createEd25519Key(){
+  private fun createEd25519Key(uuid: String){
     val keyPair by lazy {
       lazySodium.cryptoSignKeypair().apply {
         val newKeyPair = this
       }
     }
     var pub = getPublicKey(keyPair)
-    writeData(ED_PUBLIC_KEY_1_ALIAS, pub)
+    writeData("${uuid}_0_pub", pub)
     var priv = getPrivateKey(keyPair)
-    writeData(ED_PRIVATE_KEY_1_ALIAS, priv)
+    writeData("${uuid}_0_priv", priv)
   }
 
-  private fun createSecondEd25519Key(){
+  private fun createSecondEd25519Key(uuid: String){
     val keyPair by lazy {
       lazySodium.cryptoSignKeypair().apply {
         val newKeyPair = this
       }
     }
     var pub = getPublicKey(keyPair)
-    writeData(ED_PUBLIC_KEY_2_ALIAS, pub)
+    writeData("${uuid}_0_pub", pub)
     var priv = getPrivateKey(keyPair)
-    writeData(ED_PRIVATE_KEY_2_ALIAS, priv)
+    writeData("${uuid}_0_priv", priv)
   }
 
-  private fun checkEd25519KeyExists() : Boolean{
-    return readData(ED_PUBLIC_KEY_1_ALIAS) != false
-  }
+//  private fun checkEd25519KeyExists() : Boolean{
+//    return readData(ED_PUBLIC_KEY_1_ALIAS) != false
+//  }
 
   //FUNCTION TO GENERATE KEY TO SIGN/VERIFY DATA
-  private fun createRSAKey() {
+  private fun createRSAKey(uuid: String) {
     if(isDeviceSecure){
       val startDate = GregorianCalendar()
       val endDate = GregorianCalendar()
@@ -390,7 +329,7 @@ class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
 
       val keyPairGenerator: KeyPairGenerator = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_RSA, ANDROID_KEYSTORE)
 
-      val parameterSpec: KeyGenParameterSpec = KeyGenParameterSpec.Builder(RSA_KEY_ALIAS,
+      val parameterSpec: KeyGenParameterSpec = KeyGenParameterSpec.Builder("${uuid}_rsa",
         KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY).run {
         setCertificateSerialNumber(BigInteger.valueOf(777))
         setCertificateSubject(X500Principal("CN=$RSA_KEY_ALIAS"))
@@ -407,20 +346,20 @@ class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     }
   }
 
-  //FUNCTION TO CHECK IF SIGN/VERIFY KEY EXISTS
-  private fun checkRSAKeyExists(): Boolean {
-    if(isDeviceSecure){
-      val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
-        load(null)
-      }
-      val privateKey: PrivateKey? = keyStore.getKey(RSA_KEY_ALIAS, null) as PrivateKey?
-      val publicKey: PublicKey? = keyStore.getCertificate(RSA_KEY_ALIAS)?.publicKey
-
-      return privateKey != null && publicKey != null
-    }else{
-      return false
-    }
-  }
+//  //FUNCTION TO CHECK IF SIGN/VERIFY KEY EXISTS
+//  private fun checkRSAKeyExists(): Boolean {
+//    if(isDeviceSecure){
+//      val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
+//        load(null)
+//      }
+//      val privateKey: PrivateKey? = keyStore.getKey(RSA_KEY_ALIAS, null) as PrivateKey?
+//      val publicKey: PublicKey? = keyStore.getCertificate(RSA_KEY_ALIAS)?.publicKey
+//
+//      return privateKey != null && publicKey != null
+//    }else{
+//      return false
+//    }
+//  }
 
 
   /** Encryption/decryption functions */
