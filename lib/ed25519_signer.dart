@@ -17,7 +17,7 @@ class Ed25519Signer{
   }
 
   String getUuid(){
-    return uuid;
+    return uuid.toString();
   }
 
   Future<void> rotateForEd25519() async{

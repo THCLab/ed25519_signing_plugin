@@ -16,17 +16,21 @@ class Ed25519SigningPlugin {
   ///Initializes the Ed25519 signer object, which will allow the user to generate keys,
   ///rotate them and delete them.
   static Future<Ed25519Signer> establishForEd25519() async{
-    var uuid = const Uuid().toString();
+    String uuid = const Uuid().v4().toString();
     await _channel.invokeMethod('establishForEd25519', {'uuid' : uuid});
     return Ed25519Signer(uuid);
   }
 
-  static Ed25519Signer getSignerFromUuid(String uuid){
+  static Ed25519Signer getEd25519SignerFromUuid(String uuid){
     return Ed25519Signer(uuid);
   }
 
+  static RSASigner getRSASignerFromUuid(String uuid){
+    return RSASigner(uuid);
+  }
+
   static Future<RSASigner> establishForRSA() async{
-    var uuid = const Uuid().toString();
+    String uuid = const Uuid().v4().toString();
     await _channel.invokeMethod('establishForRSA', {'uuid' : uuid});
     return RSASigner(uuid);
   }
@@ -96,10 +100,8 @@ class Ed25519SigningPlugin {
   static Future<bool> editData(String key, String data) async {
     bool isDeviceSecure = await _channel.invokeMethod("checkIfDeviceSecure");
     if (isDeviceSecure) {
-      var algorithm = await _channel.invokeMethod("getAlgorithm");
-      String signedData = await _channel.invokeMethod("sign$algorithm", {'message' : data});
       var result = await _channel
-          .invokeMethod('editData', {'key': key, 'data': signedData});
+          .invokeMethod('editData', {'key': key, 'data': data});
       if (result == true) {
         return true;
       } else {
@@ -110,46 +112,5 @@ class Ed25519SigningPlugin {
     throw DeviceNotSecuredException(
         'Secure lock on this device is not set up. Consider setting a pin or pattern.');
   }
-
-  // ///Sets the algorithm the user will be using while signing or verifying data.
-  // ///Accepts string and currently supports Ed25519 and RSA, any other string will throw an exception.
-  // static Future<void> setAlgorithm(String algorithm) async{
-  //   bool isDeviceSecure = await _channel.invokeMethod("checkIfDeviceSecure");
-  //   if(isDeviceSecure){
-  //     if(algorithm == "Ed25519" || algorithm == "RSA"){
-  //       await _channel.invokeMethod("setAlgorithm");
-  //     }else{
-  //       throw UnsupportedAlgorithmException('This algorithm is not supported. Currently supported algorithms: RSA, Ed25519');
-  //     }
-  //   }else{
-  //     throw DeviceNotSecuredException(
-  //         'Secure lock on this device is not set up. Consider setting a pin or pattern.');
-  //   }
-  // }
-  //
-  // ///Signs the provided string using chosen algorithm.
-  // ///In order to work correctly, a secure screen lock has to be set up (this can be checked with checkIfDeviceSecure()).
-  // ///Returns signed data as "signature:data" if signing succeeds or false. An asynchronous function, has to be awaited.
-  // static Future<dynamic> signData(String data) async {
-  //   var algorithm = await _channel.invokeMethod("getAlgorithm");
-  //   var result = await _channel.invokeMethod('sign$algorithm', {'data': data});
-  //   if (result != false) {
-  //     return result;
-  //   } else {
-  //     return false;
-  //   }
-  // }
-  //
-  // ///Verifies provided data with local certificate. Returns true if the signature is valid and false if it's not.
-  // ///An asynchronous function, has to be awaited.
-  // static Future<bool> verifyData(String data) async {
-  //   var result = await _channel.invokeMethod('verifyData', {'data': data});
-  //   if (result == true) {
-  //     return true;
-  //   } else {
-  //     return false;
-  //   }
-  // }
-
 
 }

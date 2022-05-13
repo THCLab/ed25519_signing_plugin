@@ -1,16 +1,16 @@
+import 'package:ed25519_signing_plugin/ed25519_signer.dart';
 import 'package:ed25519_signing_plugin/ed25519_signing_plugin.dart';
 import 'package:flutter/material.dart';
-import 'dart:async';
-
-import 'package:flutter/services.dart';
 
 void main() async{
-  await Ed25519SigningPlugin.setAlgorithm("Ed25519");
-  runApp(const MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  var signer = await Ed25519SigningPlugin.establishForRSA();
+  runApp(MyApp(signer: signer,));
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({Key? key}) : super(key: key);
+  final signer;
+  const MyApp({Key? key, this.signer}) : super(key: key);
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -23,10 +23,25 @@ class _MyAppState extends State<MyApp> {
   TextEditingController deleteKeyController = TextEditingController();
   TextEditingController editKeyController = TextEditingController();
   TextEditingController editDataController = TextEditingController();
+  TextEditingController signDataController = TextEditingController();
   String writeResult = '';
   String readResult = '';
   String deleteResult = '';
   String editResult = '';
+  String currentKey = '';
+  String nextKey = '';
+  String signature = '';
+  late var signer;
+
+  @override
+  void initState(){
+    signer = widget.signer;
+    super.initState();
+  }
+
+  // getSigner() async{
+  //   signer = await Ed25519SigningPlugin.establishForEd25519();
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +54,66 @@ class _MyAppState extends State<MyApp> {
           child: Center(
               child: Column(
                 children: [
+                  const Text(
+                    'Signer uuid:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
+                  ),
+                  Text(signer.uuid),
+                  const Divider(),
+                  const Text(
+                    'Current keys:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
+                  ),
+                  RawMaterialButton(
+                    onPressed: () async {
+                      currentKey = await signer.getCurrentPubKey();
+                      nextKey = await signer.getNextPubKey();
+                      setState(() {
+
+                      });
+                    },
+                    child: const Text('Get keys!'),
+                  ),
+                  Text(currentKey),
+                  Text(nextKey),
+                  const Divider(),
+                  const Text(
+                    'Rotate keys:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
+                  ),
+                  RawMaterialButton(
+                    onPressed: () async {
+                      await signer.rotateForEd25519();
+                      currentKey = await signer.getCurrentPubKey();
+                      nextKey = await signer.getNextPubKey();
+                      setState(() {
+
+                      });
+                    },
+                    child: const Text('Rotate!'),
+                  ),
+                  const Divider(),
+                  const Text(
+                    'Sign data:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
+                  ),
+                  TextFormField(
+                    controller: signDataController,
+                    decoration: const InputDecoration(hintText: "data"),
+                  ),
+                  RawMaterialButton(
+                    onPressed: () async {
+                      signature = await signer.sign(signDataController.text);
+                      setState(() {
+
+                      });
+                    },
+                    child: const Text('Sign!'),
+                  ),
+                  Text(signature),
+                  const Divider(
+                    thickness: 5,
+                  ),
                   const Text(
                     '1. Write',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
@@ -161,6 +236,7 @@ class _MyAppState extends State<MyApp> {
                   ),
                   Text(editResult),
                   const Divider(),
+
                 ],
               )),
         ),

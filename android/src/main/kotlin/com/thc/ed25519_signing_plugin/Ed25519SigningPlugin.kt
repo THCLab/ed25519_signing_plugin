@@ -50,6 +50,7 @@ public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
   private var dataSignature: String = ""
   private lateinit var pendingResult: Result
   private lateinit var signatureResult: String
+  private lateinit var resultUuid : String
 
   override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
     channel = MethodChannel(flutterPluginBinding.binaryMessenger, "ed25519_signing_plugin")
@@ -73,6 +74,10 @@ public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
       var signature = message?.let { signEd25519(kp, it, lazySodium) }
       result.success(signature)
     }else if(call.method == "signRSA"){
+      val uuid = call.argument<String>("uuid")
+      if (uuid != null) {
+        this.resultUuid = uuid
+      }
       this.pendingResult = result
       val data = call.argument<String>("message")
       if (data != null) {
@@ -85,7 +90,15 @@ public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
       }else{
         result.error("UNAVAILABLE", "Data cannot be null!", null)
       }
-    }else if(call.method == "checkIfDeviceSecure"){
+    }else if(call.method == "getRSAKey"){
+      val alias = call.argument<String>("alias")
+      val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
+        load(null)
+      }
+      val publicKey: PublicKey? = keyStore.getCertificate(alias)?.publicKey
+      result.success(publicKey)
+    }
+    else if(call.method == "checkIfDeviceSecure"){
       val getResult = checkIfDeviceSecure()
       if (getResult){
         result.success(true)
@@ -173,12 +186,8 @@ public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
           val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
             load(null)
           }
-          ///TODO: JAK DODAĆ KLUCZ DO KEYSTORE?
-          var pubKey1: PublicKey = keyStore.getKey(RSA_KEY_ALIAS, null) as PublicKey
-          var privKey1 : PrivateKey = keyStore.getKey(RSA_KEY_ALIAS, null) as PrivateKey
-          writeData("${uuid}_0_pub", pubKey1 as String)
-          writeData("${uuid}_0_priv", privKey1 as String)
-          createSecondEd25519Key(uuid)
+          keyStore.setEntry("${uuid}_0_rsa", keyStore.getEntry("${uuid}_1_rsa", null), null)
+          createNextRSAKey(uuid)
           result.success(true)
         }catch (e: Exception){
           result.success(false)
@@ -228,54 +237,14 @@ public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
     return res
   }
 
-//  fun verifyEd25519(
-//    key : String,
-//    message: String,
-//    lazySodium: LazySodiumAndroid,
-//    signature: String
-//  ): Boolean {
-//    return lazySodium.cryptoSignVerifyDetached(
-//      signature, message, Key.fromBase64String(key)
-//    )
-//  }
-
   fun getPublicKey(keyPair: KeyPair) = Base64.encodeToString(keyPair.publicKey.asBytes, Base64.NO_WRAP)
   fun getPrivateKey(keyPair: KeyPair) = Base64.encodeToString(keyPair.secretKey.asBytes, Base64.NO_WRAP)
-
-
-//  /** RSA functions */
-//  //FUNCTION TO VERIFY DATA READ FROM SHARED PREFERENCES
-//  private fun verifyRSA(dataToVerify: String?) : Boolean {
-//    if (isDeviceSecure) {
-//      val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
-//        load(null)
-//      }
-//      val signatureFromUser = dataToVerify?.subSequence(0, dataToVerify.indexOf(":")).toString()
-//      val dataFromUser =
-//        dataToVerify?.subSequence(dataToVerify.indexOf(":") + 1, dataToVerify.length).toString()
-//      val certificate: Certificate? = keyStore.getCertificate(RSA_KEY_ALIAS)
-//
-//      if (certificate != null) {
-//        val signature: ByteArray = Base64.decode(signatureFromUser, Base64.DEFAULT)
-//        val isValid: Boolean = Signature.getInstance("SHA256withRSA").run {
-//          initVerify(certificate)
-//          update(dataFromUser.toByteArray())
-//          verify(signature)
-//        }
-//        return isValid
-//      } else {
-//        return false
-//      }
-//    } else {
-//      return false
-//    }
-//  }
-
 
   /** Shared Preferences functions */
   fun writeData(key: String, data: String){
     try{
       val encryptedData = encrypt(data)
+      println(activity.callingPackage)
       val sharedPref = activity.getPreferences(Context.MODE_PRIVATE) ?: return
       with (sharedPref.edit()) {
         putString(key, encryptedData)
@@ -294,6 +263,7 @@ public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
     }else{
       val userData = decrypt(textToRead)
       if(userData != null){
+        println(userData)
         return userData
       }
       return false
@@ -372,14 +342,11 @@ public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
       }
     }
     var pub = getPublicKey(keyPair)
-    writeData("${uuid}_0_pub", pub)
+    writeData("${uuid}_1_pub", pub)
     var priv = getPrivateKey(keyPair)
-    writeData("${uuid}_0_priv", priv)
+    writeData("${uuid}_1_priv", priv)
   }
 
-//  private fun checkEd25519KeyExists() : Boolean{
-//    return readData(ED_PUBLIC_KEY_1_ALIAS) != false
-//  }
 
   //FUNCTION TO GENERATE KEY TO SIGN/VERIFY DATA
   private fun createRSAKey(uuid: String) {
@@ -393,7 +360,7 @@ public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
       val parameterSpec: KeyGenParameterSpec = KeyGenParameterSpec.Builder("${uuid}_0_rsa",
         KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY).run {
         setCertificateSerialNumber(BigInteger.valueOf(777))
-        setCertificateSubject(X500Principal("CN=$RSA_KEY_ALIAS"))
+        setCertificateSubject(X500Principal("CN=${uuid}_0_rsa"))
         setDigests(KeyProperties.DIGEST_SHA256)
         setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1)
         setCertificateNotBefore(startDate.time)
@@ -418,7 +385,7 @@ public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
       val parameterSpec: KeyGenParameterSpec = KeyGenParameterSpec.Builder("${uuid}_1_rsa",
         KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY).run {
         setCertificateSerialNumber(BigInteger.valueOf(777))
-        setCertificateSubject(X500Principal("CN=$RSA_KEY_ALIAS"))
+        setCertificateSubject(X500Principal("CN=${uuid}_1_rsa"))
         setDigests(KeyProperties.DIGEST_SHA256)
         setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1)
         setCertificateNotBefore(startDate.time)
@@ -432,21 +399,6 @@ public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
     }
   }
 
-//  //FUNCTION TO CHECK IF SIGN/VERIFY KEY EXISTS
-//  private fun checkRSAKeyExists(): Boolean {
-//    if(isDeviceSecure){
-//      val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
-//        load(null)
-//      }
-//      val privateKey: PrivateKey? = keyStore.getKey(RSA_KEY_ALIAS, null) as PrivateKey?
-//      val publicKey: PublicKey? = keyStore.getCertificate(RSA_KEY_ALIAS)?.publicKey
-//
-//      return privateKey != null && publicKey != null
-//    }else{
-//      return false
-//    }
-//  }
-
   fun cleanUp(uuid: String){
     val prefs = activity.getPreferences(Context.MODE_PRIVATE)
     val keys: Map<String, *> = prefs.all
@@ -454,6 +406,19 @@ public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
       if(key.contains(uuid)){
         deleteData(key)
       }
+    }
+    val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
+      load(null)
+    }
+    var containsKey0 = keyStore.isKeyEntry("${uuid}_0_rsa")
+    var containsKey1 = keyStore.isKeyEntry("${uuid}_1_rsa")
+    if(containsKey0){
+      println("contains")
+      keyStore.deleteEntry("${uuid}_0_rsa")
+    }
+    if(containsKey1){
+      println("contains")
+      keyStore.deleteEntry("${uuid}_1_rsa")
     }
   }
 
@@ -528,7 +493,7 @@ public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
         val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
           load(null)
         }
-        val privateKey: PrivateKey = keyStore.getKey(RSA_KEY_ALIAS, null) as PrivateKey
+        val privateKey: PrivateKey = keyStore.getKey("${resultUuid}_0_rsa", null) as PrivateKey
         val signature: ByteArray? = Signature.getInstance("SHA256withRSA").run {
           initSign(privateKey)
           update(dataToSign.toByteArray())
@@ -562,18 +527,11 @@ public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
 }
 
 //KEYSTORE ALIAS
-private const val ANDROID_KEYSTORE = "ff9641b1-c535-4ddf-b98d-8b56ea518340"
+private const val ANDROID_KEYSTORE = "AndroidKeyStore"
 //ENCRYPT/DECRYPT KEY ALIAS
 private const val ANDROID_AES_ALIAS = "da1500b3-1671-4abd-a12d-358dbd4561a2"
 //IV STRING SEPARATOR
 private const val IV_SEPARATOR = ";"
-//SIGN/VERIFY WITH RSA ALIAS
-private const val RSA_KEY_ALIAS = "5297b5c9-84e0-4533-9239-748b2ab8d7ba"
-//ALIASES FOR 2 KEYPAIRS OF ED25519 KEYS
-private const val ED_PUBLIC_KEY_1_ALIAS = "44aa7c96-36b2-4370-8681-a7fca6e708a1"
-private const val ED_PRIVATE_KEY_1_ALIAS = "94451570-af89-4a1c-a716-3659d54d301f"
-private const val ED_PUBLIC_KEY_2_ALIAS = "954e0e29-2414-4617-8439-7b8d673023ce"
-private const val ED_PRIVATE_KEY_2_ALIAS = "22edeafb-faaa-4130-a218-3be888813efe"
 //ALIAS FOR SETTING CHOSEN ALGORITHM
 private const val ALGORITHM_ALIAS = "355114e2-35d0-4e55-b764-7cbdf949ce8b"
 //REQUEST CODE FOR AUTHENTICATION SCREEN
