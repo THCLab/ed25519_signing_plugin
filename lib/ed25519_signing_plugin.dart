@@ -21,20 +21,26 @@ class Ed25519SigningPlugin {
     return Ed25519Signer(uuid);
   }
 
+  ///Returns the Ed25519 signer object from given uuid
   static Ed25519Signer getEd25519SignerFromUuid(String uuid){
     return Ed25519Signer(uuid);
   }
 
+
+  ///Returns the RSA signer object from given uuid
   static RSASigner getRSASignerFromUuid(String uuid){
     return RSASigner(uuid);
   }
 
+  ///Initializes the RSA signer object, which will allow the user to generate keys,
+  ///rotate them and delete them.
   static Future<RSASigner> establishForRSA() async{
     String uuid = const Uuid().v4().toString();
     await _channel.invokeMethod('establishForRSA', {'uuid' : uuid});
     return RSASigner(uuid);
   }
 
+  ///Deletes the keys established by signer with particular uuid
   static Future<void> cleanUp(String uuid) async{
     await _channel.invokeMethod('cleanUp', {'uuid' : uuid});
   }
@@ -42,7 +48,7 @@ class Ed25519SigningPlugin {
 
   /** SharedPref methods **/
 
-  ///Writes provided data under provided key in shared preferences. Data is signed and encrypted using AES.
+  ///Writes provided data under provided key in shared preferences. Data is encrypted using AES.
   ///Works only if the device has a secure screen lock set, otherwise throws an exception. Returns true if data is successfully saved.
   static Future<bool> writeData(String key, String data) async {
     bool isDeviceSecure = await _channel.invokeMethod("checkIfDeviceSecure");
@@ -60,7 +66,7 @@ class Ed25519SigningPlugin {
         'Secure lock on this device is not set up. Consider setting a pin or pattern.');
   }
 
-  ///Reads data saved under provided key from shared preferences. First, data signature is verified and if it is valid, data are decrypted.
+  ///Reads data saved under provided key from shared preferences.
   ///Works only if the device has a secure screen lock set, otherwise throws an exception. Returns data if it is successfully read.
   static Future<dynamic> readData(String key) async {
     bool isDeviceSecure = await _channel.invokeMethod("checkIfDeviceSecure");
@@ -95,7 +101,7 @@ class Ed25519SigningPlugin {
         'Secure lock on this device is not set up. Consider setting a pin or pattern.');
   }
 
-  ///Edits data under provided key in shared preferences. Data is signed and encrypted using AES.
+  ///Edits data under provided key in shared preferences. Data is encrypted using AES.
   ///Works only if the device has a secure screen lock set, otherwise throws an exception. Returns true if data is successfully saved.
   static Future<bool> editData(String key, String data) async {
     bool isDeviceSecure = await _channel.invokeMethod("checkIfDeviceSecure");
