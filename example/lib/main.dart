@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
-  var signer = await Ed25519SigningPlugin.getRSASignerFromUuid('5a95700b-a6ad-47fa-9bde-719c58e1f287');
+  var signer = await Ed25519SigningPlugin.getEd25519SignerFromUuid('ecd886f1-1af6-4e62-a6b2-825e2b15ebd2');
   runApp(MyApp(signer: signer,));
 }
 
@@ -111,6 +111,22 @@ class _MyAppState extends State<MyApp> {
                     child: const Text('Sign!'),
                   ),
                   Text(signature),
+                  const Divider(),
+                  const Text(
+                    'Clean up:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25),
+                  ),
+                  RawMaterialButton(
+                    onPressed: () async {
+                      await Ed25519SigningPlugin.cleanUp(signer.getUuid());
+                      setState(() {
+                        currentKey = '';
+                        nextKey = '';
+                        signature = '';
+                      });
+                    },
+                    child: const Text('Clean up!'),
+                  ),
                   const Divider(
                     thickness: 5,
                   ),
