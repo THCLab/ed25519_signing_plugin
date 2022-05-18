@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
-  var signer = await Ed25519SigningPlugin.getEd25519SignerFromUuid('ecd886f1-1af6-4e62-a6b2-825e2b15ebd2');
+  var signer = await Ed25519SigningPlugin.establishForRSA();
   runApp(MyApp(signer: signer,));
 }
 
@@ -83,7 +83,7 @@ class _MyAppState extends State<MyApp> {
                   ),
                   RawMaterialButton(
                     onPressed: () async {
-                      await signer.rotateForEd25519();
+                      await signer.rotateForRSA();
                       currentKey = await signer.getCurrentPubKey();
                       nextKey = await signer.getNextPubKey();
                       setState(() {
@@ -118,7 +118,7 @@ class _MyAppState extends State<MyApp> {
                   ),
                   RawMaterialButton(
                     onPressed: () async {
-                      await Ed25519SigningPlugin.cleanUp(signer.getUuid());
+                      await Ed25519SigningPlugin.cleanUp(signer);
                       setState(() {
                         currentKey = '';
                         nextKey = '';

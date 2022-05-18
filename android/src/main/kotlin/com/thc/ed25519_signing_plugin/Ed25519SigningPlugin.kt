@@ -190,8 +190,16 @@ public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
           val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
             load(null)
           }
-          keyStore.setEntry("${uuid}_0_rsa", keyStore.getEntry("${uuid}_1_rsa", null), null)
+          val privateKey = keyStore.getKey("${uuid}_1_rsa", null)
+          println("old privkey = $privateKey")
+          val publicKey = if (privateKey != null) keyStore.getCertificate("${uuid}_1_rsa") else null
+          println("here passed")
+          keyStore.setKeyEntry("${uuid}_0_rsa", privateKey,  null, arrayOf(publicKey))
+          println("here passed too")
           createNextRSAKey(uuid)
+          println("reached here")
+          val privateKey2 = keyStore.getKey("${uuid}_1_rsa", null)
+          println("new privkey = $privateKey2")
           result.success(true)
         }catch (e: Exception){
           result.success(false)

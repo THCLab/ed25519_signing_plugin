@@ -52,8 +52,9 @@ class Ed25519SigningPlugin {
   }
 
   ///Deletes the keys established by signer with particular uuid
-  static Future<void> cleanUp(String uuid) async{
-    await _channel.invokeMethod('cleanUp', {'uuid' : uuid});
+  static Future<void> cleanUp(dynamic signer) async{
+    await _channel.invokeMethod('cleanUp', {'uuid' : signer.getUuid()});
+    signer = null;
   }
 
 
