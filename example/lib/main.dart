@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
-  var signer = await Ed25519SigningPlugin.establishForRSA();
+  var signer = await Ed25519SigningPlugin.getRSASignerFromUuid('5a95700b-a6ad-47fa-9bde-719c58e1f287');
   runApp(MyApp(signer: signer,));
 }
 

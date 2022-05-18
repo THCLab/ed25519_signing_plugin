@@ -96,7 +96,11 @@ public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
         load(null)
       }
       val publicKey: PublicKey? = keyStore.getCertificate(alias)?.publicKey
-      result.success(publicKey)
+      if (publicKey != null) {
+        result.success(Base64.encodeToString(publicKey.encoded, Base64.NO_WRAP))
+      }else{
+        result.success(false)
+      }
     }
     else if(call.method == "checkIfDeviceSecure"){
       val getResult = checkIfDeviceSecure()
@@ -203,6 +207,10 @@ public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
       }catch (e: Exception){
         result.success(false)
       }
+    }else if(call.method == "checkUuid"){
+      val uuid = call.argument<String>("uuid")
+      var resulted = checkUuid(uuid!!)
+      result.success(resulted)
     }
     else {
       result.notImplemented()
@@ -222,6 +230,25 @@ public class Ed25519SigningPlugin: FlutterPlugin, MethodCallHandler, ActivityAwa
       isDeviceSecure = true
       true
     }
+  }
+
+  fun checkUuid(uuid: String) : Boolean{
+    val prefs = activity.getPreferences(Context.MODE_PRIVATE)
+    val keys: Map<String, *> = prefs.all
+    for ((key, value) in keys) {
+      if(key.contains(uuid!!)){
+        return true
+      }
+    }
+    val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
+      load(null)
+    }
+    var containsKey0 = keyStore.isKeyEntry("${uuid}_0_rsa")
+    var containsKey1 = keyStore.isKeyEntry("${uuid}_1_rsa")
+    if(containsKey0 && containsKey1){
+      return true
+    }
+    return false
   }
 
 

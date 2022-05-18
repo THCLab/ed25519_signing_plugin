@@ -22,14 +22,25 @@ class Ed25519SigningPlugin {
   }
 
   ///Returns the Ed25519 signer object from given uuid
-  static Ed25519Signer getEd25519SignerFromUuid(String uuid){
-    return Ed25519Signer(uuid);
+  static Future<Ed25519Signer> getEd25519SignerFromUuid(String uuid) async{
+    var isCorrectUuid = await _channel.invokeMethod('checkUuid', {'uuid' : uuid});
+    if(isCorrectUuid){
+      return Ed25519Signer(uuid);
+
+    }else{
+      throw IncorrectUuidException('There are no keys associated with this UUID saved on the device');
+    }
   }
 
 
   ///Returns the RSA signer object from given uuid
-  static RSASigner getRSASignerFromUuid(String uuid){
-    return RSASigner(uuid);
+  static Future<RSASigner> getRSASignerFromUuid(String uuid) async{
+    var isCorrectUuid = await _channel.invokeMethod('checkUuid', {'uuid' : uuid});
+    if(isCorrectUuid){
+      return RSASigner(uuid);
+    }else{
+      throw IncorrectUuidException('There are no keys associated with this UUID saved on the device');
+    }
   }
 
   ///Initializes the RSA signer object, which will allow the user to generate keys,

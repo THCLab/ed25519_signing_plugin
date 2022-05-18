@@ -1,31 +1,23 @@
-///An exception thrown when the algorithm entered by user is not supported
-class UnsupportedAlgorithmException implements Exception {
-  ///The description for the exception.
-  String cause;
 
-  ///Exception constructor containing the description for the exception.
-  UnsupportedAlgorithmException(this.cause);
-  @override
-  String toString() => "UnsupportedAlgorithmException: $cause";
-}
-
-///An exception thrown when the algorithm has not been initialized
-class AlgorithmNotSetException implements Exception{
-  ///The description for the exception.
-  String cause;
-
-  ///Exception constructor containing the description for the exception.
-  AlgorithmNotSetException(this.cause);
-  @override
-  String toString() => "AlgorithmNotSetException: $cause";
-}
-
+///An exception thrown when there is no entry under such key in keystore.
 class NoKeyInStorageException implements Exception {
   ///The description for the exception.
   String cause;
 
   ///Exception constructor containing the description for the exception.
   NoKeyInStorageException(this.cause);
+  @override
+  String toString() => "NoKeyInStorageException: $cause";
+}
+
+///An exception thrown when the signer created from UUID is incorrect and there are no keys
+///containing provided uuid
+class IncorrectUuidException implements Exception {
+  ///The description for the exception.
+  String cause;
+
+  ///Exception constructor containing the description for the exception.
+  IncorrectUuidException(this.cause);
   @override
   String toString() => "NoKeyInStorageException: $cause";
 }
