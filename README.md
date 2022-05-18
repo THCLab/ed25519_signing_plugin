@@ -1,2 +1,2 @@
-# ed25519_signing_plugin
-Plugin for signing using RSA or Ed25519
+A plugin for signing data using RSA or Ed25519. Enables the user to rotate the keys and clean unused ones.
+

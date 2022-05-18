@@ -1,10 +1,10 @@
 import 'package:ed25519_signing_plugin/ed25519_signer.dart';
-import 'package:ed25519_signing_plugin/ed25519_signing_plugin.dart';
+import 'package:ed25519_signing_plugin/thclab_signing_plugin.dart';
 import 'package:flutter/material.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
-  var signer = await Ed25519SigningPlugin.establishForRSA();
+  var signer = await THCLabSigningPlugin.establishForEd25519();
   runApp(MyApp(signer: signer,));
 }
 
@@ -38,10 +38,6 @@ class _MyAppState extends State<MyApp> {
     signer = widget.signer;
     super.initState();
   }
-
-  // getSigner() async{
-  //   signer = await Ed25519SigningPlugin.establishForEd25519();
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +79,7 @@ class _MyAppState extends State<MyApp> {
                   ),
                   RawMaterialButton(
                     onPressed: () async {
-                      await signer.rotateForRSA();
+                      await signer.rotateForEd25519();
                       currentKey = await signer.getCurrentPubKey();
                       nextKey = await signer.getNextPubKey();
                       setState(() {
@@ -118,7 +114,7 @@ class _MyAppState extends State<MyApp> {
                   ),
                   RawMaterialButton(
                     onPressed: () async {
-                      await Ed25519SigningPlugin.cleanUp(signer);
+                      await THCLabSigningPlugin.cleanUp(signer);
                       setState(() {
                         currentKey = '';
                         nextKey = '';
@@ -146,7 +142,7 @@ class _MyAppState extends State<MyApp> {
                     onPressed: () async {
                       if (writeDataController.text.isNotEmpty &&
                           writeKeyController.text.isNotEmpty) {
-                        var result = await Ed25519SigningPlugin.writeData(
+                        var result = await THCLabSigningPlugin.writeData(
                             writeKeyController.text, writeDataController.text);
                         if (result == true) {
                           setState(() {
@@ -174,7 +170,7 @@ class _MyAppState extends State<MyApp> {
                   RawMaterialButton(
                     onPressed: () async {
                       if (readKeyController.text.isNotEmpty) {
-                        var result = await Ed25519SigningPlugin.readData(
+                        var result = await THCLabSigningPlugin.readData(
                             readKeyController.text);
                         if (result != false) {
                           setState(() {
@@ -202,7 +198,7 @@ class _MyAppState extends State<MyApp> {
                   RawMaterialButton(
                     onPressed: () async {
                       if (deleteKeyController.text.isNotEmpty) {
-                        var result = await Ed25519SigningPlugin.deleteData(
+                        var result = await THCLabSigningPlugin.deleteData(
                             deleteKeyController.text);
                         if (result == true) {
                           setState(() {
@@ -235,7 +231,7 @@ class _MyAppState extends State<MyApp> {
                     onPressed: () async {
                       if (editDataController.text.isNotEmpty &&
                           editKeyController.text.isNotEmpty) {
-                        var result = await Ed25519SigningPlugin.editData(
+                        var result = await THCLabSigningPlugin.editData(
                             editKeyController.text, editDataController.text);
                         if (result == true) {
                           setState(() {

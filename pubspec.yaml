@@ -1,5 +1,5 @@
 name: ed25519_signing_plugin
-description: A pluggin for signing and verifying data, encrypting them and writing them to Shared Preferences. Currently supports ed25519 and RSA.
+description: A plugin for signing and verifying data, encrypting them and writing them to Shared Preferences. Currently supports ed25519 and RSA.
 version: 0.0.1
 homepage:
 
@@ -8,6 +8,7 @@ environment:
   flutter: ">=2.5.0"
 
 dependencies:
+  change_app_package_name: ^1.0.0
   flutter:
     sdk: flutter
   uuid: ^3.0.6
@@ -30,7 +31,7 @@ flutter:
     platforms:
       android:
         package: com.thc.ed25519_signing_plugin
-        pluginClass: Ed25519SigningPlugin
+        pluginClass: THCLabSigningPlugin
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:
